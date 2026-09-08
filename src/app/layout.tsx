@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { LanguageProvider } from '@/contexts/LanguageContext';
+
 export default function RootLayout({
   children,
 }: {
@@ -21,7 +23,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body>{children}</body>
+      <body>
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
+      </body>
     </html>
   );
 }

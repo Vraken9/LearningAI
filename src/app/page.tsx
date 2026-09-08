@@ -23,51 +23,43 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import ChatWidget from '@/components/chat/ChatWidget';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-// ============================================
-// Radha Bali - Storytelling & Warmth Homepage
-// Focused on human stories, genuine laughter, warm memories,
-// and stunning Balinese landscape imagery.
-// 100% emoji-free & Admin Console completely unexposed.
-// ============================================
-
-// Format price to IDR
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price);
-}
-
-// ---- Destination Data with Warm Story Angles ----
+// ---- Destination Data ----
 const destinations = [
   {
     name: 'Ubud',
-    story: 'Ketenangan Batin, Hutan Suci & Sawah Zamrud',
-    count: '8 pilihan perjalanan',
+    story_id: 'Ketenangan Batin, Hutan Suci & Sawah Zamrud',
+    story_en: 'Inner Peace, Sacred Forests & Emerald Terraces',
+    count_id: '8 pilihan perjalanan',
+    count_en: '8 travel options',
     region: 'Gianyar',
     image: 'https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=600',
   },
   {
     name: 'Nusa Penida',
-    story: 'Tebing Karst Ikonik & Birunya Samudra Lepas',
-    count: '5 pilihan perjalanan',
+    story_id: 'Tebing Karst Ikonik & Birunya Samudra Lepas',
+    story_en: 'Iconic Karst Cliffs & Open Blue Ocean',
+    count_id: '5 pilihan perjalanan',
+    count_en: '5 travel options',
     region: 'Klungkung',
     image: '/images/nusa-penida.jpg',
   },
   {
     name: 'Kintamani',
-    story: 'Fajar Emas di Atas Awan & Hangatnya Kopi Pagi',
-    count: '4 pilihan perjalanan',
+    story_id: 'Fajar Emas di Atas Awan & Hangatnya Kopi Pagi',
+    story_en: 'Golden Dawn Above the Clouds & Warm Morning Coffee',
+    count_id: '4 pilihan perjalanan',
+    count_en: '4 travel options',
     region: 'Bangli',
     image: '/images/kintamani.jpg',
   },
   {
     name: 'Uluwatu',
-    story: 'Senja Dramatis di Tebing Pura Samudra Selatan',
-    count: '6 pilihan perjalanan',
+    story_id: 'Senja Dramatis di Tebing Pura Samudra Selatan',
+    story_en: 'Dramatic Sunset at the Southern Ocean Temple Cliff',
+    count_id: '6 pilihan perjalanan',
+    count_en: '6 travel options',
     region: 'Badung',
     image: 'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?w=600',
   },
@@ -83,9 +75,11 @@ const popularPackages = [
     duration: '3D2N',
     rating: 4.7,
     reviews: 234,
-    description: 'Menyusuri pantai pasir putih tersembunyi, sunset dinner di Teluk Jimbaran, dan relaksasi spa.',
+    description_id: 'Menyusuri pantai pasir putih tersembunyi, sunset dinner di Teluk Jimbaran, dan relaksasi spa.',
+    description_en: 'Explore hidden white sand beaches, sunset dinner at Jimbaran Bay, and spa relaxation.',
     image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600',
-    category: 'Paket Wisata',
+    category_id: 'Paket Wisata',
+    category_en: 'Tour Package',
     perPerson: true,
   },
   {
@@ -96,9 +90,11 @@ const popularPackages = [
     duration: '4D3N',
     rating: 4.9,
     reviews: 187,
-    description: 'Menemukan kedamaian di Tegallalang, Melukat di Tirta Empul, dan sentra seniman tradisional.',
+    description_id: 'Menemukan kedamaian di Tegallalang, Melukat di Tirta Empul, dan sentra seniman tradisional.',
+    description_en: 'Find peace in Tegallalang, Melukat at Tirta Empul, and visit traditional artist centers.',
     image: 'https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=600',
-    category: 'Paket Wisata',
+    category_id: 'Paket Wisata',
+    category_en: 'Tour Package',
     perPerson: true,
   },
   {
@@ -109,9 +105,11 @@ const popularPackages = [
     duration: '2D1N',
     rating: 4.6,
     reviews: 312,
-    description: 'Petualangan pulau eksotis: Tebing Kelingking, Angel Billabong, dan snorkeling bersama pari manta.',
+    description_id: 'Petualangan pulau eksotis: Tebing Kelingking, Angel Billabong, dan snorkeling bersama pari manta.',
+    description_en: 'Exotic island adventure: Kelingking Cliff, Angel Billabong, and snorkeling with manta rays.',
     image: '/images/nusa-penida.jpg',
-    category: 'Paket Wisata',
+    category_id: 'Paket Wisata',
+    category_en: 'Tour Package',
     perPerson: true,
   },
   {
@@ -122,69 +120,39 @@ const popularPackages = [
     duration: '1D',
     rating: 4.8,
     reviews: 428,
-    description: 'Mendaki kaldera vulkanik di keheningan fajar, sarapan uap alami, dan berendam di kolam air panas.',
+    description_id: 'Mendaki kaldera vulkanik di keheningan fajar, sarapan uap alami, dan berendam di kolam air panas.',
+    description_en: 'Hike the volcanic caldera in the silence of dawn, natural steam breakfast, and soak in hot springs.',
     image: '/images/kintamani.jpg',
-    category: 'Aktivitas',
-    perPerson: true,
-  },
-  {
-    name: 'Lovina Sunrise Dolphin & Hot Springs 2D1N',
-    slug: 'lovina-sunrise-dolphin-hot-springs-2d1n',
-    destination: 'Lovina',
-    price: 1950000,
-    duration: '2D1N',
-    rating: 4.9,
-    reviews: 215,
-    description: 'Menyaksikan lumba-lumba liar saat sunrise dengan perahu jukung tradisional dan Air Terjun Gitgit.',
-    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600',
-    category: 'Paket Wisata',
-    perPerson: true,
-  },
-  {
-    name: 'Uluwatu Sunset & Kecak Fire Dance',
-    slug: 'uluwatu-sunset-kecak-fire-dance',
-    destination: 'Uluwatu',
-    price: 450000,
-    duration: '1D',
-    rating: 4.8,
-    reviews: 512,
-    description: 'Menyaksikan tarian magis Kecak di atas tebing karang 70 meter menghadap Samudera Hindia saat senja keemasan.',
-    image: 'https://images.unsplash.com/photo-1559628233-100c798642d4?w=600',
-    category: 'Aktivitas',
+    category_id: 'Aktivitas',
+    category_en: 'Activity',
     perPerson: true,
   },
 ];
 
-
-
 // ---- Heartfelt Testimonials ----
 const heartfeltStories = [
   {
-    quote:
-      'Kami datang ke Bali membawa kepenatan, tetapi pulang membawa cerita dan tawa yang tak ada habisnya. Pemandu kami, Bli Wayan, bukan sekadar memandu rute, tapi bercerita tentang filosofi hidup orang Bali dengan sangat tulus. Rekomendasi Nusa AI juga sangat pas dengan ritme liburan keluarga kami.',
+    quote_id: 'Kami datang ke Bali membawa kepenatan, tetapi pulang membawa cerita dan tawa yang tak ada habisnya. Pemandu kami, Bli Wayan, bukan sekadar memandu rute, tapi bercerita tentang filosofi hidup orang Bali dengan sangat tulus. Rekomendasi Nusa AI juga sangat pas dengan ritme liburan keluarga kami.',
+    quote_en: 'We came to Bali carrying exhaustion, but returned with endless stories and laughter. Our guide, Bli Wayan, did not just guide the route, but told the philosophy of Balinese life very sincerely. Nusa AI recommendations also fit perfectly with our family holiday rhythm.',
     author: 'Keluarga Hendrawan',
     origin: 'Surabaya',
     trip: 'Ubud & Jatiluwih Family Trip',
   },
   {
-    quote:
-      'Momen naik perahu jukung saat fajar di Lovina adalah memori paling indah dalam hidup kami berdua. Melihat lumba-lumba melompat bersamaan dengan terbitnya matahari adalah keajaiban nyata. Terima kasih Radha Bali telah merancang perjalanan ini dengan begitu hangat.',
+    quote_id: 'Momen naik perahu jukung saat fajar di Lovina adalah memori paling indah dalam hidup kami berdua. Melihat lumba-lumba melompat bersamaan dengan terbitnya matahari adalah keajaiban nyata. Terima kasih Radha Bali telah merancang perjalanan ini dengan begitu hangat.',
+    quote_en: 'The moment taking a jukung boat at dawn in Lovina is the most beautiful memory in our lives. Seeing dolphins jumping along with the sunrise is a real miracle. Thank you Radha Bali for designing this trip so warmly.',
     author: 'Reza & Amanda',
     origin: 'Bandung',
     trip: 'Lovina Sunrise & Secret Waterfalls',
-  },
-  {
-    quote:
-      'Sebagai rombongan sahabat kantor, kami hanya ingin tertawa lepas tanpa stres memikirkan logistik. Seluruh penjemputan, boat express, hingga makan siang di Nusa Penida berjalan tanpa kendala. Rasanya seperti berlibur bersama sahabat lama yang mengurus semuanya.',
-    author: 'Dimas & Rekan Kerja',
-    origin: 'Jakarta',
-    trip: 'Nusa Penida Expedition 2D1N',
   },
 ];
 
 export default function HomePage() {
   const [scrolled, setScrolled] = useState(false);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
+  
+  // Use Language Context
+  const { language, t, toggleLanguage, formatCurrency } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -200,7 +168,6 @@ export default function HomePage() {
 
   return (
     <>
-      {/* ---- Navigation Bar (Clean & Focused on Package Catalog) ---- */}
       <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
         <div className="container navbar-inner">
           <Link href="/" className="navbar-logo" id="navbar-logo">
@@ -212,20 +179,28 @@ export default function HomePage() {
               Beranda
             </Link>
             <Link href="/products" className="navbar-link navbar-link-highlight">
-              <span>Katalog Paket Wisata</span>
-              <span className="navbar-badge">44 Paket</span>
+              <span>{t.nav.products}</span>
             </Link>
             <a href="#destinations" className="navbar-link">
-              Destinasi Pilihan
+              {t.nav.destinations}
             </a>
             <a href="#testimonials" className="navbar-link">
-              Ulasan Wisatawan
+              {t.nav.testimonials}
             </a>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {/* Language Switcher */}
+            <button 
+              onClick={toggleLanguage}
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '0.4rem 0.6rem', fontWeight: 'bold' }}
+            >
+              {language === 'id' ? 'EN' : 'ID'}
+            </button>
+            
             <Link href="/products" className="btn btn-primary btn-sm">
-              <span>Jelajahi Paket</span>
+              <span>{t.hero.cta_primary}</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Link>
             <button
@@ -235,33 +210,30 @@ export default function HomePage() {
               }}
             >
               <MessageSquare className="w-3.5 h-3.5 mr-1" style={{ color: '#5c7ebd' }} />
-              <span>Tanya Nusa AI</span>
+              <span>{t.hero.cta_secondary}</span>
             </button>
           </div>
         </div>
       </nav>
 
-      {/* ---- Hero Section: Warm Scenic Bali & Inspiring Travel ---- */}
       <section className="hero" id="hero">
         <div className="container">
           <div className="hero-travel-centered">
             <div className="hero-badge">
               <span className="hero-badge-dot" />
-              <span>EKSPLORASI &amp; KEHANGATAN PULAU DEWATA</span>
+              <span>{t.hero.badge}</span>
             </div>
 
             <h1 className="hero-travel-title">
-              Rencanakan Perjalanan Hangat &amp;<br />
-              <span>Berkesan di Tanah Bali</span>
+              {t.hero.title}
             </h1>
 
             <p className="hero-travel-desc">
-              Dari puncak berkabut Kintamani, hijaunya terasering Ubud, hingga birunya samudra lepas Nusa Penida. Nikmati 44 paket wisata kurasi terbaik dengan pemandu lokal ramah, jadwal fleksibel, dan kenyamanan tanpa rasa terburu-buru.
+              {t.hero.subtitle}
             </p>
 
-            {/* Quick Destination Exploration */}
             <div className="hero-quick-destinations">
-              <span className="hero-dest-label">Destinasi Populer:</span>
+              <span className="hero-dest-label">{t.nav.destinations}:</span>
               {destinations.map((d) => (
                 <Link
                   key={d.name}
@@ -274,10 +246,9 @@ export default function HomePage() {
               ))}
             </div>
 
-            {/* Main CTAs */}
             <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 'var(--space-4)' }}>
               <Link href="/products" className="btn btn-primary btn-lg">
-                <span>Lihat Seluruh 44 Paket Wisata</span>
+                <span>{t.hero.cta_primary}</span>
                 <ArrowRight className="w-4 h-4 ml-1.5" />
               </Link>
               <button
@@ -287,39 +258,22 @@ export default function HomePage() {
                 }}
               >
                 <MessageSquare className="w-4 h-4 mr-1.5" style={{ color: '#5c7ebd' }} />
-                <span>Konsultasi dengan Nusa AI</span>
+                <span>{t.hero.cta_secondary}</span>
               </button>
-            </div>
-
-            {/* Trust Indicators */}
-            <div className="hero-trust-bar">
-              <div className="hero-trust-item">
-                <Sparkles className="w-4 h-4" style={{ color: '#5c7ebd' }} />
-                <span>44 Paket Wisata Kurasi Pilihan</span>
-              </div>
-              <div className="hero-trust-item">
-                <ShieldCheck className="w-4 h-4" style={{ color: '#056653' }} />
-                <span>Pemandu Berlisensi &amp; Ramah Warga Lokal</span>
-              </div>
-              <div className="hero-trust-item">
-                <Smile className="w-4 h-4" style={{ color: '#79af93' }} />
-                <span>Kenyamanan Santai &amp; Jadwal Fleksibel</span>
-              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ---- Section 2: Curated Destinations with Character ---- */}
       <section className="section" id="destinations">
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: 'var(--space-10)' }}>
             <span className="badge" style={{ marginBottom: 'var(--space-3)' }}>
-              RUANG &amp; WILAYAH ISTIMEWA
+              {t.destinations.badge}
             </span>
-            <h2 className="section-title">Destinasi Penuh Pesona di Bali</h2>
+            <h2 className="section-title">{t.destinations.title}</h2>
             <p className="section-subtitle">
-              Klik destinasi di bawah ini untuk melihat paket perjalanan yang dirancang khusus di kawasan tersebut.
+              {t.destinations.subtitle}
             </p>
           </div>
 
@@ -347,7 +301,7 @@ export default function HomePage() {
                   </span>
                   <div className="destination-card-name">{dest.name}</div>
                   <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.92)', marginTop: '2px', lineHeight: 1.4 }}>
-                    {dest.story}
+                    {language === 'id' ? dest.story_id : dest.story_en}
                   </div>
                   <div
                     className="destination-card-count"
@@ -356,12 +310,12 @@ export default function HomePage() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      color: '#bae6fd',
+                      color: '#cad9e8',
                     }}
                   >
-                    <span>{dest.count}</span>
+                    <span>{language === 'id' ? dest.count_id : dest.count_en}</span>
                     <span style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '2px', color: '#ffffff', fontWeight: 600 }}>
-                      Lihat Paket <ChevronRight className="w-3.5 h-3.5" />
+                      <ChevronRight className="w-3.5 h-3.5" />
                     </span>
                   </div>
                 </div>
@@ -371,17 +325,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ---- Section 4: Popular Tour Packages ---- */}
       <section className="section" id="packages" style={{ background: 'var(--color-bg-secondary)', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: 'var(--space-10)' }}>
             <span className="badge badge-accent" style={{ marginBottom: 'var(--space-3)' }}>
-              PILIHAN PERJALANAN TERBAIK
+              {t.hero.badge}
             </span>
-            <h2 className="section-title">Katalog Paket Wisata Unggulan</h2>
-            <p className="section-subtitle">
-              Dirancang dengan ritme perjalanan yang nyaman, transparan, dan penuh momen berharga.
-            </p>
+            <h2 className="section-title">{t.nav.products}</h2>
           </div>
 
           <div className="packages-grid">
@@ -389,11 +339,10 @@ export default function HomePage() {
               <div key={pkg.name} className="package-card">
                 <Link href={`/products/${pkg.slug}`} className="package-card-image" style={{ display: 'block' }}>
                   <img src={pkg.image} alt={pkg.name} loading="lazy" />
-                  <div className="package-card-badge">{pkg.category}</div>
+                  <div className="package-card-badge">{language === 'id' ? pkg.category_id : pkg.category_en}</div>
                   <button
                     type="button"
                     className="package-card-favorite"
-                    aria-label="Add to favorites"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -404,10 +353,7 @@ export default function HomePage() {
                       borderColor: favorites[pkg.name] ? 'rgba(244, 63, 94, 0.4)' : undefined,
                     }}
                   >
-                    <Heart
-                      className="w-4 h-4"
-                      fill={favorites[pkg.name] ? 'currentColor' : 'none'}
-                    />
+                    <Heart className="w-4 h-4" fill={favorites[pkg.name] ? 'currentColor' : 'none'} />
                   </button>
                 </Link>
 
@@ -420,7 +366,7 @@ export default function HomePage() {
                   <Link href={`/products/${pkg.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <h3 className="package-card-name" style={{ transition: 'color 0.15s ease' }}>{pkg.name}</h3>
                   </Link>
-                  <p className="package-card-description">{pkg.description}</p>
+                  <p className="package-card-description">{language === 'id' ? pkg.description_id : pkg.description_en}</p>
 
                   <div className="package-card-meta">
                     <span className="package-card-meta-item">
@@ -429,24 +375,20 @@ export default function HomePage() {
                     </span>
                     <span className="package-card-meta-item">
                       <Users className="w-3.5 h-3.5 text-slate-500" />
-                      <span>{pkg.reviews} ulasan</span>
+                      <span>{pkg.reviews} {language === 'id' ? 'ulasan' : 'reviews'}</span>
                     </span>
                   </div>
 
                   <div className="package-card-footer">
                     <div>
-                      <div className="package-card-price">{formatPrice(pkg.price)}</div>
+                      <div className="package-card-price">{formatCurrency(pkg.price)}</div>
                       <div className="package-card-price-unit">
-                        {pkg.perPerson ? '/ orang' : '/ paket'}
+                        {pkg.perPerson ? (language === 'id' ? '/ orang' : '/ person') : (language === 'id' ? '/ paket' : '/ package')}
                       </div>
                     </div>
 
-                    <Link
-                      href={`/products/${pkg.slug}`}
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: '6px 12px', fontSize: '0.75rem', gap: '4px' }}
-                    >
-                      <span>Lihat Detail</span>
+                    <Link href={`/products/${pkg.slug}`} className="btn btn-secondary btn-sm" style={{ padding: '6px 12px', fontSize: '0.75rem', gap: '4px' }}>
+                      <span>{language === 'id' ? 'Lihat Detail' : 'View Details'}</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
@@ -454,68 +396,44 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-
-          {/* CTA to All Products Catalog */}
-          <div style={{ textAlign: 'center', marginTop: 'var(--space-10)' }}>
-            <Link
-              href="/products"
-              className="btn btn-primary btn-lg"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.6rem',
-                boxShadow: 'var(--shadow-md)',
-              }}
-            >
-              <span>Jelajahi Seluruh 44 Paket Wisata</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
         </div>
       </section>
 
-      {/* ---- Section 5: Heartfelt Traveler Stories ---- */}
       <section className="section" id="testimonials">
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: 'var(--space-12)' }}>
             <span className="badge" style={{ marginBottom: 'var(--space-3)' }}>
-              CERITA DARI HATI
+              {t.testimonials.badge}
             </span>
-            <h2 className="section-title">Kenangan Nyata Bersama Radha Bali</h2>
-            <p className="section-subtitle">
-              Bukan sekadar angka ulasan, inilah kesan jujur dari para wisatawan yang membawa pulang kehangatan dari Bali.
-            </p>
+            <h2 className="section-title">{t.testimonials.title}</h2>
+            <p className="section-subtitle">{t.testimonials.subtitle}</p>
           </div>
 
           <div className="testimonials-grid">
             {heartfeltStories.map((t, index) => (
               <div key={index} className="testimonial-card">
                 <div className="testimonial-top-row">
-                  <span className="testimonial-trip-badge">
-                    {t.trip}
-                  </span>
+                  <span className="testimonial-trip-badge">{t.trip}</span>
                   <div className="testimonial-stars">
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                     ))}
                   </div>
                 </div>
-                <p className="testimonial-text">&ldquo;{t.quote}&rdquo;</p>
+                <p className="testimonial-text">&ldquo;{language === 'id' ? t.quote_id : t.quote_en}&rdquo;</p>
                 <div className="testimonial-author">
-                  <div className="testimonial-avatar">
-                    {t.author.charAt(0)}
-                  </div>
+                  <div className="testimonial-avatar">{t.author.charAt(0)}</div>
                   <div>
                     <div className="testimonial-author-name">
                       <span>{t.author}</span>
-                      <span className="testimonial-verified-badge" title="Wisatawan Terverifikasi">
+                      <span className="testimonial-verified-badge">
                         <CheckCircle2 className="w-3 h-3" style={{ color: '#056653' }} />
-                        <span>Terverifikasi</span>
+                        <span>{language === 'id' ? 'Terverifikasi' : 'Verified'}</span>
                       </span>
                     </div>
                     <div className="testimonial-author-location">
                       <MapPin className="w-3 h-3" style={{ color: '#00959c' }} />
-                      <span>Wisatawan asal {t.origin}</span>
+                      <span>{language === 'id' ? `Wisatawan asal ${t.origin}` : `Traveler from ${t.origin}`}</span>
                     </div>
                   </div>
                 </div>
@@ -525,97 +443,38 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ---- Section 6: Inviting Call-To-Action (Warm & Hospitable) ---- */}
       <section className="section cta-section">
         <div className="container">
           <div className="cta-card">
-            <span
-              className="badge"
-              style={{
-                marginBottom: 'var(--space-3)',
-                background: '#eaf4fa',
-                color: '#5c7ebd',
-                border: '1px solid #cad9e8',
-              }}
-            >
-              KONSULTASI PERJALANAN RAMAH &amp; TRANSPARAN
+            <span className="badge" style={{ marginBottom: 'var(--space-3)', background: '#eaf4fa', color: '#5c7ebd', border: '1px solid #cad9e8' }}>
+              {t.cta.badge}
             </span>
-            <h2 className="cta-title">Ingin Membicarakan Rencana Liburan Anda?</h2>
-            <p className="cta-description">
-              Sampaikan impian perjalanan, destinasi favorit, atau waktu liburan Anda kepada asisten digital cerdas Nusa AI atau tim lokal kami. Kami siap mendampingi Anda dengan sepenuh hati dan kehangatan khas Bali.
-            </p>
+            <h2 className="cta-title">{t.cta.title}</h2>
+            <p className="cta-description">{t.cta.subtitle}</p>
             <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button
-                className="btn btn-primary btn-lg"
-                id="cta-chat-btn"
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('openChat'));
-                }}
-              >
+              <button className="btn btn-primary btn-lg" onClick={() => window.dispatchEvent(new CustomEvent('openChat'))}>
                 <MessageSquare className="w-4 h-4 mr-1.5" />
-                <span>Mulai Cerita dengan Nusa AI</span>
+                <span>{t.cta.button}</span>
               </button>
-              <Link href="/products" className="btn btn-secondary btn-lg">
-                <span>Jelajahi Seluruh 44 Paket</span>
-                <ArrowRight className="w-4 h-4 ml-1.5" />
-              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ---- Footer (Clean & Secure - ZERO Admin Link) ---- */}
       <footer className="footer">
         <div className="container">
           <div className="footer-grid">
             <div>
-              <div className="footer-brand">
-                <span>Radha Bali</span>
-              </div>
-              <p className="footer-brand-text">
-                Menciptakan perjalanan liburan yang hangat, penuh tawa, dan berkesan di Pulau Dewata dengan pendampingan cerdas Nusa AI.
-              </p>
-            </div>
-
-            <div>
-              <div className="footer-heading">Kisah &amp; Destinasi</div>
-              <div className="footer-links">
-                <a href="#testimonials" className="footer-link">Kisah Wisatawan</a>
-                <a href="#destinations" className="footer-link">Destinasi Pilihan</a>
-                <a href="#packages" className="footer-link">Katalog Paket Tur</a>
-                <a href="#philosophy" className="footer-link">Keramahan Bali</a>
-              </div>
-            </div>
-
-            <div>
-              <div className="footer-heading">Pilihan Liburan</div>
-              <div className="footer-links">
-                <a href="#packages" className="footer-link">Liburan Bersama Sahabat</a>
-                <a href="#packages" className="footer-link">Momen Hangat Keluarga</a>
-                <a href="#packages" className="footer-link">Romansa Pasangan &amp; Fajar</a>
-                <a href="#packages" className="footer-link">Petualangan Alam Tropis</a>
-              </div>
-            </div>
-
-            <div>
-              <div className="footer-heading">Layanan &amp; Bantuan</div>
-              <div className="footer-links">
-                <a href="#" className="footer-link">Pusat Bantuan &amp; FAQ</a>
-                <a href="#" className="footer-link">Ketentuan Reschedule Fleksibel</a>
-                <a href="#" className="footer-link">Jaminan Asuransi Perjalanan</a>
-                <a href="#" className="footer-link">Kebijakan Privasi</a>
-              </div>
+              <div className="footer-brand"><span>Radha Bali</span></div>
+              <p className="footer-brand-text">{t.footer.description}</p>
             </div>
           </div>
-
           <div className="footer-bottom">
-            <div>&copy; 2026 Radha Bali. Merayakan Cerita dan Kehangatan di Tanah Dewata.</div>
-            <div>Ditenagai oleh Nusa AI Assistant</div>
+            <div>&copy; 2026 Radha Bali.</div>
           </div>
         </div>
       </footer>
 
-      {/* ---- Floating Chat Widget Component ---- */}
       <ChatWidget />
     </>
   );

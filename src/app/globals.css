@@ -666,9 +666,8 @@ ul, ol {
 }
 
 .destination-card:hover .destination-card-name {
-  color: #7dc7bc;
+  color: #ffffff;
   transform: translateX(4px);
-  text-shadow: 0 2px 8px rgba(0, 149, 156, 0.5);
 }
 
 .destination-card-count {

@@ -16,6 +16,7 @@ import {
   ExternalLink,
   ChevronRight,
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // ============================================
 // Radha Bali - Chat Widget Component
@@ -23,15 +24,15 @@ import {
 // Zero emojis, crisp typography, clean card layout
 // ============================================
 
-// Format price to IDR
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price);
-}
+// No longer needed, using LanguageContext formatCurrency
+// function formatPrice(price: number): string {
+//   return new Intl.NumberFormat('id-ID', {
+//     style: 'currency',
+//     currency: 'IDR',
+//     minimumFractionDigits: 0,
+//     maximumFractionDigits: 0,
+//   }).format(price);
+// }
 
 // Simple markdown to HTML converter for bot messages
 function renderMarkdown(text: string): string {
@@ -58,6 +59,7 @@ const WELCOME_MESSAGE: ChatMessage = {
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
+  const { formatCurrency, language } = useLanguage();
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -236,7 +238,7 @@ export default function ChatWidget() {
             {msg.products && msg.products.length > 0 && (
               <div className="chat-products">
                 {msg.products.map((product: ProductCard) => (
-                  <ProductCardComponent key={product.id} product={product} />
+                  <ProductCardComponent key={product.id} product={product} formatCurrency={formatCurrency} language={language} />
                 ))}
               </div>
             )}
@@ -284,7 +286,7 @@ export default function ChatWidget() {
 }
 
 // ---- Product Card Sub-component ----
-function ProductCardComponent({ product }: { product: ProductCard }) {
+function ProductCardComponent({ product, formatCurrency, language }: { product: ProductCard, formatCurrency: (price: number) => string, language: string }) {
   return (
     <a
       href={`/products/${product.slug}`}
@@ -316,7 +318,7 @@ function ProductCardComponent({ product }: { product: ProductCard }) {
           )}
         </div>
         <div className="chat-product-price">
-          {formatPrice(product.price)}
+          {formatCurrency(product.price)}
           <span
             style={{
               fontSize: '0.65rem',
@@ -325,7 +327,7 @@ function ProductCardComponent({ product }: { product: ProductCard }) {
               marginLeft: '4px',
             }}
           >
-            {product.price_per_person ? '/org' : '/paket'}
+            {product.price_per_person ? (language === 'en' ? '/person' : '/org') : (language === 'en' ? '/package' : '/paket')}
           </span>
         </div>
         <div className="chat-product-btn">

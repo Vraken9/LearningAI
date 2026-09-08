@@ -17,8 +17,8 @@ import {
   Tag,
   ChevronDown,
 } from 'lucide-react';
-import type { Product } from '@/lib/types';
 import { generateWhatsAppBookingUrl } from '@/lib/destinations';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ProductCatalogClientProps {
   initialProducts: Product[];
@@ -43,14 +43,14 @@ const SORT_OPTIONS = [
   { id: 'duration', label: 'Durasi Terpanjang' },
 ];
 
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price);
-}
+// function formatPrice(price: number): string {
+//   return new Intl.NumberFormat('id-ID', {
+//     style: 'currency',
+//     currency: 'IDR',
+//     minimumFractionDigits: 0,
+//     maximumFractionDigits: 0,
+//   }).format(price);
+// }
 
 export default function ProductCatalogClient({ initialProducts }: ProductCatalogClientProps) {
   const searchParams = useSearchParams();
@@ -62,6 +62,7 @@ export default function ProductCatalogClient({ initialProducts }: ProductCatalog
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedRegion, setSelectedRegion] = useState('all');
   const [sortBy, setSortBy] = useState('popular');
+  const { formatCurrency, language } = useLanguage();
 
   useEffect(() => {
     if (urlDestination) {
@@ -304,7 +305,7 @@ export default function ProductCatalogClient({ initialProducts }: ProductCatalog
             {filteredProducts.map((product) => {
               const waUrl = generateWhatsAppBookingUrl(
                 product.name,
-                formatPrice(product.price)
+                formatCurrency(product.price)
               );
 
               return (
@@ -390,11 +391,11 @@ export default function ProductCatalogClient({ initialProducts }: ProductCatalog
                     {/* Card Footer: Price & Actions */}
                     <div className="warm-product-footer">
                       <div className="warm-price-col">
-                        <span className="warm-price-label">Mulai dari</span>
+                        <span className="warm-price-label">{language === 'en' ? 'Starting from' : 'Mulai dari'}</span>
                         <div className="warm-price-val">
-                          {formatPrice(product.price)}
+                          {formatCurrency(product.price)}
                           <span className="warm-price-unit">
-                            {product.price_per_person ? '/org' : '/unit'}
+                            {product.price_per_person ? (language === 'en' ? '/person' : '/org') : (language === 'en' ? '/unit' : '/unit')}
                           </span>
                         </div>
                       </div>

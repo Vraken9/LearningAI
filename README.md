@@ -2,7 +2,7 @@
 
 > A comprehensive Bali travel platform featuring a personalized AI chatbot designed to assist users in discovering the best travel packages, powered by Retrieval-Augmented Generation (RAG) and Function Calling.
 
-**Live Demo:** [https://learning-chatbot-hh7x7ca4s-yarr1.vercel.app/](https://learning-chatbot-hh7x7ca4s-yarr1.vercel.app/)
+**Live Demo:** [https://learning-chatbot-orcin.vercel.app/](https://learning-chatbot-orcin.vercel.app/)
 
 ---
 

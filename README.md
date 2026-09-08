@@ -1,113 +1,167 @@
-<div align="center">
+# 🌴 Radha Bali — AI-Powered Travel Platform
 
-#  Gemini AI REST API
+> Platform travel wisata Bali dengan chatbot AI personal yang membantu menemukan paket wisata terbaik.
 
-**Express.js API powered by Google Gemini for text generation & image analysis**
+![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
+![Supabase](https://img.shields.io/badge/Supabase-pgvector-green?logo=supabase)
+![Gemini](https://img.shields.io/badge/Gemini-2.0_Flash-purple?logo=google)
 
-<br/>
+## ✨ Fitur
 
-<p align="center">
-  <a href="https://www.ibm.com">
-    <img src="https://img.shields.io/badge/IBM-052FAD?style=for-the-badge&logo=ibm&logoColor=white" alt="IBM" />
-  </a>
-  <a href="https://www.hacktiv8.com">
-    <img src="https://img.shields.io/badge/Hacktiv8-FF6600?style=for-the-badge&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABhSURBVDhPY/hPBGBkZPwPYxMDGBgZGf9D2cQCJig7GKoGDTBB2MEwNRA2E4gNVUPQOBAmKDuIdjPITJAmYgHY30Q7GqSJ6NCAaUI3k2A3Ew4NDAcjE8ihQbJxOEoDAA5HIU/3dqZJAAAAAElFTkSuQmCC&logoColor=white" alt="Hacktiv8" />
-  </a>
-  <a href="https://antigravity.google">
-    <img src="https://img.shields.io/badge/Antigravity-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Google Antigravity" />
-  </a>
-  <a href="https://aistudio.google.com">
-    <img src="https://img.shields.io/badge/Google%20AI%20Studio-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Google AI Studio" />
-  </a>
-</p>
+- **🤖 AI Chat Assistant** — "Nusa" chatbot yang memahami konteks wisata Bali
+- **🔍 RAG (Retrieval-Augmented Generation)** — Jawaban berbasis data dengan pgvector
+- **🛠️ Function Calling** — AI mencari produk & info secara real-time
+- **📦 25+ Paket Wisata** — Database lengkap produk travel
+- **📊 Admin Panel** — Dashboard, CRUD produk, knowledge base, conversation logs
+- **⚡ Caching & Rate Limiting** — Performa optimal dan proteksi abuse
+- **📱 Responsive Design** — Mobile-friendly dengan premium aesthetics
 
-<br/>
+## 🏗️ Tech Stack
 
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white)
-![Express](https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white)
-![Gemini](https://img.shields.io/badge/Gemini_3.5_Flash_Lite-8E75B2?style=flat-square&logo=googlegemini&logoColor=white)
-![License](https://img.shields.io/badge/License-ISC-blue?style=flat-square)
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript 5 |
+| AI Model | Google Gemini 2.0 Flash |
+| Embeddings | text-embedding-004 (768 dim) |
+| Database | Supabase (PostgreSQL + pgvector) |
+| Styling | Vanilla CSS (Design System) |
+| Deployment | Vercel (free tier compatible) |
 
-</div>
+## 📁 Project Structure
 
----
+```
+├── scripts/
+│   ├── setup-db.sql          # Database schema (run in Supabase SQL Editor)
+│   └── seed.ts               # Seed data script
+├── src/
+│   ├── app/
+│   │   ├── page.tsx           # Landing page
+│   │   ├── layout.tsx         # Root layout + SEO
+│   │   ├── globals.css        # Design system
+│   │   ├── admin/             # Admin panel
+│   │   │   ├── page.tsx       # Dashboard, Products, Docs, Conversations
+│   │   │   └── admin.css      # Admin styles
+│   │   └── api/
+│   │       ├── chat/          # POST - Chat with AI (function calling)
+│   │       ├── embed/         # POST - Admin embed documents
+│   │       ├── health/        # GET  - Health check
+│   │       ├── products/      # GET  - Public products listing
+│   │       └── admin/         # Admin CRUD APIs
+│   ├── components/
+│   │   ├── chat/ChatWidget.tsx  # Floating chat widget
+│   │   └── ErrorBoundary.tsx    # Error boundary
+│   ├── data/
+│   │   ├── seed-products.ts   # 25+ product data
+│   │   └── seed-knowledge.ts  # 20+ knowledge docs
+│   └── lib/
+│       ├── types.ts           # TypeScript interfaces
+│       ├── supabase.ts        # Supabase client
+│       ├── gemini.ts          # Gemini AI wrapper + function calling
+│       ├── tools.ts           # Tool handlers (search, RAG)
+│       ├── prompts.ts         # System prompt for AI
+│       ├── rate-limit.ts      # Sliding window rate limiter
+│       └── cache.ts           # SHA-256 response caching
+```
 
-##  Deskripsi
+## 🚀 Getting Started
 
-REST API sederhana yang menggunakan **Google Gemini AI** (`gemini-3.5-flash-lite`) melalui `@google/genai` SDK. Proyek ini dibuat sebagai bagian dari pembelajaran **IBM SkillsBuild x Hacktiv8** menggunakan **Google Antigravity IDE** dan **Google AI Studio**.
-
-##  Fitur
-
-| Endpoint | Method | Deskripsi |
-|---|---|---|
-| `/generate-text` | `POST` | Generate teks dari prompt |
-| `/generate-from-image` | `POST` | Analisis gambar + prompt menggunakan AI |
-
-##  Quick Start
-
-### 1. Clone & Install
+### 1. Install Dependencies
 
 ```bash
-git clone https://github.com/Vraken9/LearningAI.git
-cd LearningAI
 npm install
 ```
 
-### 2. Setup Environment
+### 2. Environment Variables
 
-Buat file `.env` di root project:
+Create a `.env` file:
 
 ```env
-GEMINI_API_KEY=your_gemini_api_key_here
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
->  Dapatkan API Key di [Google AI Studio](https://aistudio.google.com/apikey)
+### 3. Setup Database
 
-### 3. Jalankan Server
+1. Open your Supabase project → **SQL Editor**
+2. Copy and paste `scripts/setup-db.sql`
+3. Run the SQL script
+
+### 4. Seed Data
 
 ```bash
-npx nodemon index.js
+npx tsx scripts/seed.ts
 ```
 
-Server berjalan di `http://localhost:3000`
+### 5. Run Development Server
 
-## 📡 Contoh Request (Postman)
-
-### Generate Text
-
-```
-POST /generate-text
-Content-Type: application/json
-
-{
-  "prompt": "Jelaskan apa itu machine learning"
-}
+```bash
+npm run dev
 ```
 
-### Generate from Image
+Visit:
+- **Landing Page**: [http://localhost:3000](http://localhost:3000)
+- **Admin Panel**: [http://localhost:3000/admin](http://localhost:3000/admin)
+- **Health Check**: [http://localhost:3000/api/health](http://localhost:3000/api/health)
+
+## 🎯 API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/chat` | Chat with AI (function calling + tool use) |
+| `POST` | `/api/embed` | Admin: embed documents into vector DB |
+| `GET` | `/api/health` | Health check (DB + Gemini status) |
+| `GET` | `/api/products` | Public products listing (with filters) |
+| `GET` | `/api/admin/stats` | Dashboard statistics |
+| `GET/POST/PUT/DELETE` | `/api/admin/products` | Product CRUD |
+| `GET/POST/PUT/DELETE` | `/api/admin/documents` | Knowledge base CRUD |
+| `GET` | `/api/admin/conversations` | Conversation list |
+| `GET` | `/api/admin/conversations/[id]` | Conversation detail |
+
+## 🤖 AI Architecture
 
 ```
-POST /generate-from-image
-Content-Type: multipart/form-data
-
-Key: image    → (File) upload gambar
-Key: prompt   → (Text) "Jelaskan isi gambar ini"
+User Message → Rate Limit → Cache Check
+    ↓
+Gemini 2.0 Flash (Function Calling)
+    ↓
+┌─────────────────────┐
+│ search_products     │ → SQL query to Supabase
+│ search_knowledge    │ → pgvector similarity search (RAG)
+│ get_product_detail  │ → Single product lookup
+└─────────────────────┘
+    ↓
+AI Response → Cache Store → Save Conversation → Return
 ```
 
-## 🛠️ Tech Stack
+## 🔐 Admin Authentication
 
-- **Runtime** — Node.js
-- **Framework** — Express 5
-- **AI Model** — Gemini 3.5 Flash Lite
-- **SDK** — @google/genai
-- **Upload** — Multer
+Admin panel (`/admin`) dilindungi oleh otentikasi sederhana berbasis cookie. 
+1. Akses `/admin`, Anda akan diarahkan ke `/login` jika belum terotentikasi.
+2. Masukkan password admin (default: `admin123` jika tidak ada `ADMIN_PASSWORD` di environment variables).
+3. Anda akan diarahkan ke dashboard setelah berhasil.
 
-##  License
+## 🚀 Deployment (Vercel)
 
-ISC © 2026
+Proyek ini telah dikonfigurasi untuk siap di-deploy ke Vercel tanpa pengaturan tambahan:
+1. Push repository ini ke GitHub.
+2. Buka dashboard Vercel, klik **Add New... > Project**.
+3. Import repository GitHub ini.
+4. Di bagian **Environment Variables**, tambahkan:
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `GEMINI_API_KEY`
+   - `ADMIN_PASSWORD` (opsional, untuk login admin yang aman)
+5. Klik **Deploy**.
+
+## 📝 License
+
+This project is for learning purposes (pembelajaran).
 
 ---
 
-<div align="center">
-  <sub>Built with  using <b>Google Antigravity IDE</b> • IBM SkillsBuild x Hacktiv8</sub>
-</div>
+Made with ❤️ for **Radha Bali**

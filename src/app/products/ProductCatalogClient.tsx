@@ -17,6 +17,7 @@ import {
   Tag,
   ChevronDown,
 } from 'lucide-react';
+import type { Product } from '@/lib/types';
 import { generateWhatsAppBookingUrl } from '@/lib/destinations';
 import { useLanguage } from '@/contexts/LanguageContext';
 

@@ -129,14 +129,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Safety fallback
+    // Safety fallback with rich context
     if (!finalText) {
       if (allProducts.length > 0) {
-        finalText =
-          'Berikut adalah rekomendasi paket wisata dan aktivitas terbaik di Bali yang kami pilihkan sesuai preferensi Anda. Anda dapat melihat detail paket langsung di bawah ini:';
+        const productSummaries = allProducts
+          .map((p) => {
+            const priceStr = new Intl.NumberFormat('id-ID', {
+              style: 'currency',
+              currency: 'IDR',
+              maximumFractionDigits: 0,
+            }).format(p.price);
+            return `- **${p.name}** (${priceStr}${p.price_per_person ? '/orang' : ''}) di ${p.destination}: ${p.short_description || p.highlights.join(', ')}`;
+          })
+          .join('\n');
+
+        finalText = `Tentu, berikut rekomendasi paket wisata dan aktivitas terbaik yang kami pilihkan sesuai kebutuhan Anda:\n\n${productSummaries}\n\nAnda dapat meninjau detail lengkap setiap opsi pada kartu di bawah ini. Silakan sampaikan jika Anda ingin menyesuaikan rute, durasi, atau perkiraan anggaran!`;
       } else {
         finalText =
-          'Maaf, layanan kami sedang mengalami lonjakan permintaan. Silakan ajukan pertanyaan kembali atau pilih paket melalui katalog kami.';
+          'Mohon maaf, kami belum menemukan paket yang sesuai persis dengan kriteria tersebut. Anda dapat mencoba kata kunci lain (seperti "diving", "snorkeling", "Ubud", atau "pantai") atau melihat seluruh paket di halaman Katalog Radha Bali.';
       }
     }
 

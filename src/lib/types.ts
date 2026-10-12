@@ -136,6 +136,7 @@ export interface GeminiFunctionResponse {
 // ---- Tool Parameter Types ----
 
 export interface SearchProductsParams {
+  query?: string;
   destination?: string;
   region?: string;
   min_price?: number;

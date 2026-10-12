@@ -22,16 +22,22 @@ export async function searchProducts(params: SearchProductsParams): Promise<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = supabase
     .from('products')
-    .select('id, name, slug, price, price_per_person, image_url, destination, duration_days, rating, short_description, highlights')
+    .select('id, name, slug, price, price_per_person, image_url, destination, region, duration_days, rating, short_description, highlights, category')
     .eq('is_active', true);
 
-  // Apply filters
+  // Apply destination filter only if it's not a generic "Bali" query
   if (params.destination) {
-    query = query.ilike('destination', `%${params.destination}%`);
+    const destClean = params.destination.trim().toLowerCase();
+    const isGenericBali = destClean === 'bali' || destClean === 'pulau bali' || destClean === 'bali island';
+    if (!isGenericBali) {
+      query = query.or(`destination.ilike.%${params.destination}%,region.ilike.%${params.destination}%`);
+    }
   }
-  if (params.region) {
+
+  if (params.region && params.region.trim().toLowerCase() !== 'bali') {
     query = query.ilike('region', `%${params.region}%`);
   }
+
   if (params.category) {
     query = query.eq('category', params.category);
   }
@@ -48,28 +54,7 @@ export async function searchProducts(params: SearchProductsParams): Promise<{
     query = query.gte('duration_days', params.min_duration);
   }
 
-  // Sort
-  switch (params.sort_by) {
-    case 'price_asc':
-      query = query.order('price', { ascending: true });
-      break;
-    case 'price_desc':
-      query = query.order('price', { ascending: false });
-      break;
-    case 'rating':
-      query = query.order('rating', { ascending: false });
-      break;
-    case 'duration':
-      query = query.order('duration_days', { ascending: true });
-      break;
-    default:
-      query = query.order('rating', { ascending: false });
-  }
-
-  // Limit
-  const limit = params.limit || 5;
-  query = query.limit(limit);
-
+  // Fetch active products before limiting so all matching packages (e.g. Amed, Menjangan) are evaluated
   const { data, error } = await query;
 
   if (error) {
@@ -92,16 +77,85 @@ export async function searchProducts(params: SearchProductsParams): Promise<{
     highlights: d.highlights || [],
   })) as ProductCard[];
 
-  // Filter by interests (array overlap) — done in JS since Supabase
-  // doesn't have a simple "any of these values in array" filter
+  // Collect keywords from params.query and params.interests
+  const searchKeywords: string[] = [];
+  if (params.query) {
+    const tokens = params.query
+      .toLowerCase()
+      .split(/[\s,]+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length > 2 && t !== 'paket' && t !== 'wisata' && t !== 'bali');
+    searchKeywords.push(...tokens);
+  }
   if (params.interests && params.interests.length > 0) {
-    const interestsLower = params.interests.map((i) => i.toLowerCase());
-    products = products.filter((p) =>
-      p.highlights.some((h) => interestsLower.some((interest) => h.toLowerCase().includes(interest))),
-    );
+    for (const interest of params.interests) {
+      const lower = interest.toLowerCase().trim();
+      if (lower && !searchKeywords.includes(lower)) {
+        searchKeywords.push(lower);
+      }
+    }
   }
 
-  return { products, total: products.length };
+  if (searchKeywords.length > 0) {
+    const scoredProducts = products
+      .map((p) => {
+        let score = 0;
+        const nameLower = (p.name || '').toLowerCase();
+        const descLower = (p.short_description || '').toLowerCase();
+        const destLower = (p.destination || '').toLowerCase();
+        const highlightsLower = (p.highlights || []).map((h) => h.toLowerCase());
+
+        for (const kw of searchKeywords) {
+          // Exact or substring match in name (highest priority)
+          if (nameLower.includes(kw)) score += 12;
+          // Match in highlights tags
+          if (highlightsLower.some((h) => h.includes(kw) || kw.includes(h))) score += 10;
+          // Match in short description
+          if (descLower.includes(kw)) score += 6;
+          // Match in destination
+          if (destLower.includes(kw)) score += 4;
+        }
+
+        return { product: p, score };
+      })
+      .filter((item) => item.score > 0);
+
+    // If matches found, sort by relevance score DESC then rating DESC
+    if (scoredProducts.length > 0) {
+      if (params.sort_by === 'price_asc') {
+        scoredProducts.sort((a, b) => a.product.price - b.product.price);
+      } else if (params.sort_by === 'price_desc') {
+        scoredProducts.sort((a, b) => b.product.price - a.product.price);
+      } else if (params.sort_by === 'duration') {
+        scoredProducts.sort((a, b) => a.product.duration_days - b.product.duration_days);
+      } else {
+        scoredProducts.sort((a, b) => b.score - a.score || b.product.rating - a.product.rating);
+      }
+      products = scoredProducts.map((item) => item.product);
+    }
+  } else {
+    // Standard sorting if no keyword filter
+    switch (params.sort_by) {
+      case 'price_asc':
+        products.sort((a, b) => a.price - b.price);
+        break;
+      case 'price_desc':
+        products.sort((a, b) => b.price - a.price);
+        break;
+      case 'duration':
+        products.sort((a, b) => a.duration_days - b.duration_days);
+        break;
+      case 'rating':
+      default:
+        products.sort((a, b) => b.rating - a.rating);
+        break;
+    }
+  }
+
+  const limit = params.limit || 5;
+  const limitedProducts = products.slice(0, limit);
+
+  return { products: limitedProducts, total: products.length };
 }
 
 // ---- search_knowledge handler (RAG) ----

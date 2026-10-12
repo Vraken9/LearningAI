@@ -25,9 +25,13 @@ export const toolDeclarations = [
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
+        query: {
+          type: SchemaType.STRING,
+          description: "Kata kunci spesifik aktivitas/pencarian, misal 'diving', 'snorkeling', 'freediving', 'sunset', 'trekking', 'pura'",
+        },
         destination: {
           type: SchemaType.STRING,
-          description: "Nama destinasi, misal 'Bali', 'Ubud', 'Nusa Penida', 'Kintamani'",
+          description: "Nama destinasi spesifik (misal 'Amed', 'Ubud', 'Nusa Penida', 'Menjangan', 'Kintamani'). Kosongkan atau abaikan jika user hanya menyebut Bali secara umum.",
         },
         region: {
           type: SchemaType.STRING,
@@ -122,7 +126,7 @@ function chatHistoryToGeminiContents(history: ChatMessage[]): Content[] {
 
 const CHAT_MODELS = ['gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-3.6-flash'];
 
-// Generate chat response using startChat API with model fallback
+// Generate chat response with model fallback
 export async function generateChatResponse(
   userMessage: string,
   history: ChatMessage[] = [],
@@ -148,11 +152,15 @@ export async function generateChatResponse(
         ],
       });
 
-      const chat = model.startChat({
-        history: chatHistoryToGeminiContents(history),
-      });
+      const contents: Content[] = [
+        ...chatHistoryToGeminiContents(history),
+        {
+          role: 'user',
+          parts: [{ text: userMessage }] as Part[],
+        },
+      ];
 
-      const result = await chat.sendMessage(userMessage);
+      const result = await model.generateContent({ contents });
       const response = result.response;
       const candidate = response.candidates?.[0];
 
@@ -163,20 +171,23 @@ export async function generateChatResponse(
       // Check for function call
       for (const part of candidate.content.parts) {
         if (part.functionCall) {
+          // Append candidate content to preserve conversation flow & thought signature
+          contents.push(candidate.content);
           return {
             text: null,
             functionCall: {
               name: part.functionCall.name,
               args: part.functionCall.args as Record<string, unknown>,
             },
-            chatSession: chat,
+            chatSession: { model, contents, modelName },
           };
         }
       }
 
       // Return text response
       const text = candidate.content.parts.map((p: any) => p.text || '').join('');
-      return { text, functionCall: null, chatSession: chat };
+      contents.push(candidate.content);
+      return { text, functionCall: null, chatSession: { model, contents, modelName } };
     } catch (err: any) {
       console.warn(`Model ${modelName} encountered error:`, err?.message || err);
       lastError = err;
@@ -187,45 +198,89 @@ export async function generateChatResponse(
 }
 
 // Continue conversation after function call result
-// Uses the same chat session to preserve thought signatures
+// Passes functionResponse with role: 'user' to ensure compatibility with Gemini endpoints
 export async function continueWithToolResult(
   chatSession: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   functionCall: GeminiFunctionCall,
   toolResult: unknown,
 ): Promise<{ text: string | null; functionCall: GeminiFunctionCall | null }> {
   try {
-    const result = await chatSession.sendMessage([
-      {
-        functionResponse: {
-          name: functionCall.name,
-          response: { result: toolResult },
-        },
-      },
-    ]);
-
-    const response = result.response;
-    const candidate = response.candidates?.[0];
-
-    if (!candidate?.content?.parts) {
-      return { text: null, functionCall: null };
-    }
-
-    // Check for another function call (chained tools)
-    for (const part of candidate.content.parts) {
-      if (part.functionCall) {
-        return {
-          text: null,
-          functionCall: {
-            name: part.functionCall.name,
-            args: part.functionCall.args as Record<string, unknown>,
+    // Standard contents-based session
+    if (chatSession && chatSession.contents && chatSession.model) {
+      chatSession.contents.push({
+        role: 'user',
+        parts: [
+          {
+            functionResponse: {
+              name: functionCall.name,
+              response: { result: toolResult },
+            },
           },
-        };
+        ],
+      });
+
+      const result = await chatSession.model.generateContent({ contents: chatSession.contents });
+      const response = result.response;
+      const candidate = response.candidates?.[0];
+
+      if (!candidate?.content?.parts) {
+        return { text: null, functionCall: null };
       }
+
+      chatSession.contents.push(candidate.content);
+
+      // Check for another function call (chained tools)
+      for (const part of candidate.content.parts) {
+        if (part.functionCall) {
+          return {
+            text: null,
+            functionCall: {
+              name: part.functionCall.name,
+              args: part.functionCall.args as Record<string, unknown>,
+            },
+          };
+        }
+      }
+
+      const text = candidate.content.parts.map((p: any) => p.text || '').join('');
+      return { text, functionCall: null };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const text = candidate.content.parts.map((p: any) => p.text || '').join('');
-    return { text, functionCall: null };
+    // Fallback if legacy chatSession is provided
+    if (chatSession && typeof chatSession.sendMessage === 'function') {
+      const result = await chatSession.sendMessage([
+        {
+          functionResponse: {
+            name: functionCall.name,
+            response: { result: toolResult },
+          },
+        },
+      ]);
+
+      const response = result.response;
+      const candidate = response.candidates?.[0];
+
+      if (!candidate?.content?.parts) {
+        return { text: null, functionCall: null };
+      }
+
+      for (const part of candidate.content.parts) {
+        if (part.functionCall) {
+          return {
+            text: null,
+            functionCall: {
+              name: part.functionCall.name,
+              args: part.functionCall.args as Record<string, unknown>,
+            },
+          };
+        }
+      }
+
+      const text = candidate.content.parts.map((p: any) => p.text || '').join('');
+      return { text, functionCall: null };
+    }
+
+    return { text: null, functionCall: null };
   } catch (err: any) {
     console.warn('continueWithToolResult error:', err?.message || err);
     return { text: null, functionCall: null };

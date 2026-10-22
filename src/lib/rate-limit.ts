@@ -15,11 +15,11 @@ export interface RateLimitResult {
 }
 
 export async function checkRateLimit(key: string): Promise<RateLimitResult> {
-  const supabase = getServerSupabaseClient();
   const now = new Date();
   const windowStart = new Date(now.getTime() - RATE_LIMIT_WINDOW_MS);
 
   try {
+    const supabase = getServerSupabaseClient();
     // Get current rate limit entry
     const { data: rawData } = await supabase
       .from('rate_limits')

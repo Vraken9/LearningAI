@@ -184,8 +184,20 @@ export async function POST(request: NextRequest) {
 
         finalText = `Tentu, berikut rekomendasi paket wisata dan aktivitas terbaik yang kami pilihkan sesuai kebutuhan Anda:\n\n${productSummaries}\n\nAnda dapat meninjau detail lengkap setiap opsi pada kartu di bawah ini. Silakan sampaikan jika Anda ingin menyesuaikan rute, durasi, atau perkiraan anggaran!`;
       } else {
-        finalText =
-          'Mohon maaf, kami belum menemukan paket yang sesuai persis dengan kriteria tersebut. Anda dapat mencoba kata kunci lain (seperti "diving", "snorkeling", "Ubud", atau "pantai") atau melihat seluruh paket di halaman Katalog Radha Bali.';
+        const popular = await searchProducts({ limit: 4 });
+        allProducts = popular.products;
+        const productSummaries = allProducts
+          .map((p) => {
+            const priceStr = new Intl.NumberFormat('id-ID', {
+              style: 'currency',
+              currency: 'IDR',
+              maximumFractionDigits: 0,
+            }).format(p.price);
+            return `- **${p.name}** (${priceStr}${p.price_per_person ? '/orang' : ''}) di ${p.destination}: ${p.short_description || p.highlights.join(', ')}`;
+          })
+          .join('\n');
+
+        finalText = `Berikut beberapa rekomendasi paket wisata terpopuler di Bali yang kami siapkan untuk Anda:\n\n${productSummaries}\n\nSilakan pilih salah satu opsi di bawah atau sampaikan preferensi Anda (destinasi, aktivitas, atau durasi) agar kami sesuaikan!`;
       }
     }
 

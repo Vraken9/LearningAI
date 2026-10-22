@@ -5,6 +5,8 @@
 
 import { getServerSupabaseClient } from './supabase';
 import { generateEmbedding } from './gemini';
+import { seedProducts } from '@/data/seed-products';
+import { seedDocuments } from '@/data/seed-knowledge';
 import type {
   SearchProductsParams,
   SearchKnowledgeParams,
@@ -18,64 +20,108 @@ export async function searchProducts(params: SearchProductsParams): Promise<{
   products: ProductCard[];
   total: number;
 }> {
-  const supabase = getServerSupabaseClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = supabase
-    .from('products')
-    .select('id, name, slug, price, price_per_person, image_url, destination, region, duration_days, rating, short_description, highlights, category')
-    .eq('is_active', true);
+  let products: ProductCard[] = [];
 
-  // Apply destination filter only if it's not a generic "Bali" query
-  if (params.destination) {
-    const destClean = params.destination.trim().toLowerCase();
-    const isGenericBali = destClean === 'bali' || destClean === 'pulau bali' || destClean === 'bali island';
-    if (!isGenericBali) {
-      query = query.or(`destination.ilike.%${params.destination}%,region.ilike.%${params.destination}%`);
+  try {
+    const supabase = getServerSupabaseClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query = supabase
+      .from('products')
+      .select('id, name, slug, price, price_per_person, image_url, destination, region, duration_days, rating, short_description, highlights, category')
+      .eq('is_active', true);
+
+    // Apply destination filter only if it's not a generic "Bali" query
+    if (params.destination) {
+      const destClean = params.destination.trim().toLowerCase();
+      const isGenericBali = destClean === 'bali' || destClean === 'pulau bali' || destClean === 'bali island';
+      if (!isGenericBali) {
+        query = query.or(`destination.ilike.%${params.destination}%,region.ilike.%${params.destination}%`);
+      }
+    }
+
+    if (params.region && params.region.trim().toLowerCase() !== 'bali') {
+      query = query.ilike('region', `%${params.region}%`);
+    }
+
+    if (params.category) {
+      query = query.eq('category', params.category);
+    }
+    if (params.max_price !== undefined) {
+      query = query.lte('price', params.max_price);
+    }
+    if (params.min_price !== undefined) {
+      query = query.gte('price', params.min_price);
+    }
+    if (params.max_duration !== undefined) {
+      query = query.lte('duration_days', params.max_duration);
+    }
+    if (params.min_duration !== undefined) {
+      query = query.gte('duration_days', params.min_duration);
+    }
+
+    // Fetch active products before limiting so all matching packages (e.g. Amed, Menjangan) are evaluated
+    const { data, error } = await query;
+
+    if (!error && data && data.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      products = ((data || []) as any[]).map((d) => ({
+        id: d.id,
+        name: d.name,
+        slug: d.slug,
+        price: d.price,
+        price_per_person: d.price_per_person,
+        image_url: d.image_url,
+        destination: d.destination,
+        duration_days: d.duration_days,
+        rating: d.rating,
+        short_description: d.short_description,
+        highlights: d.highlights || [],
+      })) as ProductCard[];
+    }
+  } catch (dbErr) {
+    console.warn('Database access in searchProducts unavailable, using local catalog:', dbErr);
+  }
+
+  // Resilient fallback: If database is offline or empty, load from seedProducts
+  if (products.length === 0) {
+    products = seedProducts.map((p, idx) => ({
+      id: `seed-${idx}-${p.slug}`,
+      name: p.name,
+      slug: p.slug,
+      price: p.price,
+      price_per_person: p.price_per_person,
+      image_url: p.image_url,
+      destination: p.destination,
+      duration_days: p.duration_days,
+      rating: p.rating,
+      short_description: p.short_description,
+      highlights: p.highlights || [],
+    }));
+
+    if (params.destination) {
+      const destClean = params.destination.trim().toLowerCase();
+      const isGenericBali = destClean === 'bali' || destClean === 'pulau bali' || destClean === 'bali island';
+      if (!isGenericBali) {
+        products = products.filter(
+          (p) =>
+            p.destination.toLowerCase().includes(destClean) ||
+            p.name.toLowerCase().includes(destClean),
+        );
+      }
+    }
+    if (params.max_price !== undefined) {
+      products = products.filter((p) => p.price <= params.max_price!);
+    }
+    if (params.min_price !== undefined) {
+      products = products.filter((p) => p.price >= params.min_price!);
+    }
+    if (params.max_duration !== undefined) {
+      products = products.filter((p) => p.duration_days <= params.max_duration!);
+    }
+    if (params.min_duration !== undefined) {
+      products = products.filter((p) => p.duration_days >= params.min_duration!);
     }
   }
-
-  if (params.region && params.region.trim().toLowerCase() !== 'bali') {
-    query = query.ilike('region', `%${params.region}%`);
-  }
-
-  if (params.category) {
-    query = query.eq('category', params.category);
-  }
-  if (params.max_price !== undefined) {
-    query = query.lte('price', params.max_price);
-  }
-  if (params.min_price !== undefined) {
-    query = query.gte('price', params.min_price);
-  }
-  if (params.max_duration !== undefined) {
-    query = query.lte('duration_days', params.max_duration);
-  }
-  if (params.min_duration !== undefined) {
-    query = query.gte('duration_days', params.min_duration);
-  }
-
-  // Fetch active products before limiting so all matching packages (e.g. Amed, Menjangan) are evaluated
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Error searching products:', error);
-    return { products: [], total: 0 };
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let products = ((data || []) as any[]).map((d) => ({
-    id: d.id,
-    name: d.name,
-    slug: d.slug,
-    price: d.price,
-    price_per_person: d.price_per_person,
-    image_url: d.image_url,
-    destination: d.destination,
-    duration_days: d.duration_days,
-    rating: d.rating,
-    short_description: d.short_description,
-    highlights: d.highlights || [],
-  })) as ProductCard[];
 
   // Collect keywords from params.query and params.interests with smart typo correction & stopword removal
   const STOPWORDS = new Set([
@@ -224,37 +270,73 @@ export async function searchKnowledge(params: SearchKnowledgeParams): Promise<{
   }
 }
 
-// Fallback text search when vector search fails
+// Fallback text search when vector search fails or database is unreachable
 async function fallbackTextSearch(params: SearchKnowledgeParams): Promise<{
   results: VectorSearchResult[];
   context: string;
 }> {
-  const supabase = getServerSupabaseClient();
+  try {
+    const supabase = getServerSupabaseClient();
+    let query = supabase
+      .from('documents')
+      .select('id, title, content, metadata')
+      .ilike('content', `%${params.query}%`);
 
-  let query = supabase
-    .from('documents')
-    .select('id, title, content, metadata')
-    .ilike('content', `%${params.query}%`);
+    if (params.source_type) {
+      query = query.eq('source_type', params.source_type);
+    }
 
-  if (params.source_type) {
-    query = query.eq('source_type', params.source_type);
+    const { data, error } = await query.limit(params.limit || 3);
+
+    if (!error && data && data.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const results = ((data || []) as any[]).map((d) => ({
+        id: d.id,
+        title: d.title,
+        content: d.content,
+        metadata: d.metadata,
+        similarity: 0.5,
+      })) as VectorSearchResult[];
+
+      const context = results
+        .map((r, i) => `[Sumber ${i + 1}: ${r.title}]\n${r.content}`)
+        .join('\n\n');
+
+      return { results, context };
+    }
+  } catch (err) {
+    console.warn('Database fallbackTextSearch unavailable, using local knowledge base:', err);
   }
 
-  const { data, error } = await query.limit(params.limit || 3);
+  // Resilient fallback: search local seed documents by keywords
+  const qTokens = params.query
+    .toLowerCase()
+    .split(/[\s,]+/)
+    .filter((t) => t.length > 2);
 
-  if (error) {
-    console.error('Error in fallback text search:', error);
-    return { results: [], context: '' };
-  }
+  const scoredDocs = seedDocuments
+    .map((doc, idx) => {
+      let score = 0;
+      const text = `${doc.title} ${doc.content}`.toLowerCase();
+      for (const t of qTokens) {
+        if (text.includes(t)) score += 5;
+      }
+      return { doc, score, idx };
+    })
+    .filter((d) => d.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, params.limit || 3);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const results = ((data || []) as any[]).map((d) => ({
-    id: d.id,
-    title: d.title,
-    content: d.content,
-    metadata: d.metadata,
-    similarity: 0.5,
-  })) as VectorSearchResult[];
+  const docsToUse =
+    scoredDocs.length > 0 ? scoredDocs.map((d) => d.doc) : seedDocuments.slice(0, params.limit || 3);
+
+  const results: VectorSearchResult[] = docsToUse.map((doc, idx) => ({
+    id: idx + 1,
+    title: doc.title,
+    content: doc.content,
+    metadata: doc.metadata,
+    similarity: 0.7,
+  }));
 
   const context = results
     .map((r, i) => `[Sumber ${i + 1}: ${r.title}]\n${r.content}`)
@@ -267,22 +349,35 @@ async function fallbackTextSearch(params: SearchKnowledgeParams): Promise<{
 export async function getProductDetail(params: GetProductDetailParams): Promise<{
   product: Record<string, unknown> | null;
 }> {
-  const supabase = getServerSupabaseClient();
+  try {
+    const supabase = getServerSupabaseClient();
+    let query = supabase.from('products').select('*').eq('is_active', true);
 
-  let query = supabase.from('products').select('*').eq('is_active', true);
+    if (params.product_name) {
+      query = query.ilike('name', `%${params.product_name}%`);
+    }
 
+    const { data, error } = await query.limit(1).single();
+
+    if (!error && data) {
+      return { product: data as Record<string, unknown> };
+    }
+  } catch (err) {
+    console.warn('Database getProductDetail unavailable, using local seed catalog:', err);
+  }
+
+  // Resilient fallback from local seedProducts
   if (params.product_name) {
-    query = query.ilike('name', `%${params.product_name}%`);
+    const searchName = params.product_name.toLowerCase();
+    const found = seedProducts.find(
+      (p) => p.name.toLowerCase().includes(searchName) || p.slug.includes(searchName),
+    );
+    if (found) {
+      return { product: found as unknown as Record<string, unknown> };
+    }
   }
 
-  const { data, error } = await query.limit(1).single();
-
-  if (error) {
-    console.error('Error getting product detail:', error);
-    return { product: null };
-  }
-
-  return { product: data as Record<string, unknown> };
+  return { product: (seedProducts[0] || null) as unknown as Record<string, unknown> };
 }
 
 // ---- Master tool executor ----

@@ -4,8 +4,8 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateChatResponse, continueWithToolResult } from '@/lib/gemini';
-import { executeTool } from '@/lib/tools';
+import { generateChatResponse, continueWithToolResults } from '@/lib/gemini';
+import { executeTool, searchProducts } from '@/lib/tools';
 import { checkRateLimit, getClientKey } from '@/lib/rate-limit';
 import { getCachedResponse, setCachedResponse } from '@/lib/cache';
 import { getServerSupabaseClient } from '@/lib/supabase';
@@ -82,52 +82,91 @@ export async function POST(request: NextRequest) {
     // Limit history to last 10 messages for token efficiency
     const trimmedHistory = chatHistory.slice(-10);
 
-    // 6. Generate response with Gemini (function calling loop)
+    // 6. Generate response with Gemini (function calling loop with resilient fallback)
     let allProducts: ProductCard[] = [];
     let finalText: string | null = null;
-    let currentFunctionCall: GeminiFunctionCall | null = null;
+    let currentFunctionCalls: GeminiFunctionCall[] = [];
     let iterations = 0;
 
-    // Initial call to Gemini
-    const initialResult = await generateChatResponse(sanitizedMessage, trimmedHistory);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let chatSession: any = initialResult.chatSession;
+    try {
+      // Initial call to Gemini
+      const initialResult = await generateChatResponse(sanitizedMessage, trimmedHistory);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const chatSession: any = initialResult.chatSession;
 
-    if (initialResult.text) {
-      finalText = initialResult.text;
-    } else if (initialResult.functionCall) {
-      currentFunctionCall = initialResult.functionCall;
-    }
-
-    // Function calling loop
-    while (currentFunctionCall && iterations < MAX_TOOL_ITERATIONS) {
-      iterations++;
-
-      // Execute the tool
-      const toolResult = await executeTool(currentFunctionCall.name, currentFunctionCall.args);
-
-      // Collect products if any
-      if (toolResult.products && toolResult.products.length > 0) {
-        allProducts = [...allProducts, ...toolResult.products];
+      if (initialResult.text) {
+        finalText = initialResult.text;
+      } else if (initialResult.functionCalls && initialResult.functionCalls.length > 0) {
+        currentFunctionCalls = initialResult.functionCalls;
+      } else if (initialResult.functionCall) {
+        currentFunctionCalls = [initialResult.functionCall];
       }
 
-      // Continue conversation with tool result (same chat session preserves thought signatures)
-      const continuedResult = await continueWithToolResult(
-        chatSession,
-        currentFunctionCall,
-        toolResult.result,
-      );
+      // Function calling loop (handles both single and parallel function calls)
+      while (currentFunctionCalls.length > 0 && iterations < MAX_TOOL_ITERATIONS) {
+        iterations++;
 
-      if (continuedResult.text) {
-        finalText = continuedResult.text;
-        currentFunctionCall = null; // Done
-      } else if (continuedResult.functionCall) {
-        currentFunctionCall = continuedResult.functionCall;
-      } else {
-        // Break if no text and no function call
-        currentFunctionCall = null;
+        // Execute all function calls concurrently
+        const executedTools = await Promise.all(
+          currentFunctionCalls.map(async (fc) => {
+            const res = await executeTool(fc.name, fc.args);
+            return {
+              name: fc.name,
+              result: res.result,
+              products: res.products || [],
+            };
+          }),
+        );
+
+        // Collect all products returned by tools
+        for (const et of executedTools) {
+          if (et.products.length > 0) {
+            allProducts = [...allProducts, ...et.products];
+          }
+        }
+
+        // Send all tool responses back to Gemini
+        const toolResponses = executedTools.map((et) => ({
+          name: et.name,
+          result: et.result,
+        }));
+
+        const continuedResult = await continueWithToolResults(chatSession, toolResponses);
+
+        if (continuedResult.text) {
+          finalText = continuedResult.text;
+          currentFunctionCalls = []; // Completed
+        } else if (continuedResult.functionCalls && continuedResult.functionCalls.length > 0) {
+          currentFunctionCalls = continuedResult.functionCalls;
+        } else if (continuedResult.functionCall) {
+          currentFunctionCalls = [continuedResult.functionCall];
+        } else {
+          currentFunctionCalls = [];
+        }
+      }
+    } catch (geminiError) {
+      console.warn('Gemini chat encountered error, using catalog fallback:', geminiError);
+      // Fallback: search products directly from catalog using query & keywords
+      try {
+        const fallbackSearch = await searchProducts({ query: sanitizedMessage, limit: 5 });
+        if (fallbackSearch.products && fallbackSearch.products.length > 0) {
+          allProducts = fallbackSearch.products;
+        } else {
+          const popularFallback = await searchProducts({ limit: 4 });
+          allProducts = popularFallback.products || [];
+        }
+      } catch (fallbackErr) {
+        console.warn('Fallback search error:', fallbackErr);
       }
     }
+
+    // Deduplicate products by id
+    const seenIds = new Set<string>();
+    allProducts = allProducts.filter((p) => {
+      if (seenIds.has(p.id)) return false;
+      seenIds.add(p.id);
+      return true;
+    });
 
     // Safety fallback with rich context
     if (!finalText) {
@@ -167,29 +206,23 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Chat API error:', error);
+    console.error('Chat API unexpected error:', error);
 
-    // Check if it's a Gemini API error
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-    if (errorMessage.includes('API key')) {
+    // Resilient fallback: return popular packages rather than a 500 error
+    try {
+      const fallback = await searchProducts({ limit: 4 });
+      return NextResponse.json({
+        reply:
+          'Halo! Kami siap membantu merencanakan liburan Anda di Bali. Berikut beberapa rekomendasi paket wisata dan aktivitas terbaik yang dapat Anda pilih:',
+        products: fallback.products,
+        session_id: crypto.randomUUID(),
+      });
+    } catch {
       return NextResponse.json(
-        { error: 'Konfigurasi AI sedang bermasalah. Hubungi admin.' },
-        { status: 500 },
-      );
-    }
-
-    if (errorMessage.includes('429') || errorMessage.includes('quota')) {
-      return NextResponse.json(
-        { error: 'Layanan AI sedang sibuk. Coba lagi dalam beberapa saat.' },
+        { error: 'Layanan sedang dimuat kembali. Silakan coba sesaat lagi.' },
         { status: 503 },
       );
     }
-
-    return NextResponse.json(
-      { error: 'Terjadi kesalahan internal. Coba lagi nanti.' },
-      { status: 500 },
-    );
   }
 }
 

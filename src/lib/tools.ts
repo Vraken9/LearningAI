@@ -77,15 +77,36 @@ export async function searchProducts(params: SearchProductsParams): Promise<{
     highlights: d.highlights || [],
   })) as ProductCard[];
 
-  // Collect keywords from params.query and params.interests
+  // Collect keywords from params.query and params.interests with smart typo correction & stopword removal
+  const STOPWORDS = new Set([
+    'dan', 'atau', 'yang', 'untuk', 'dengan', 'dari', 'ke', 'di', 'ini', 'itu',
+    'paket', 'wisata', 'rekomendasi', 'rekomendasikan', 'tolong', 'minta', 'mau',
+    'ingin', 'ada', 'bisa', 'bali', 'pulau', 'saya', 'kami', 'apa', 'saja', 'dong', 'spot'
+  ]);
+
   const searchKeywords: string[] = [];
   if (params.query) {
-    const tokens = params.query
-      .toLowerCase()
-      .split(/[\s,]+/)
-      .map((t) => t.trim())
-      .filter((t) => t.length > 2 && t !== 'paket' && t !== 'wisata' && t !== 'bali');
-    searchKeywords.push(...tokens);
+    const rawTokens = params.query.toLowerCase().split(/[\s,]+/);
+    for (let t of rawTokens) {
+      t = t.trim().replace(/[^a-z0-9]/g, '');
+      if (!t || STOPWORDS.has(t) || t.length < 3) continue;
+
+      // Typo normalization for common travel terms
+      if (t.includes('sork') || t.includes('snor') || t.includes('snork')) {
+        searchKeywords.push('snorkeling');
+        continue;
+      }
+      if (t.includes('freedic') || t.includes('freediv') || t.includes('freedive')) {
+        searchKeywords.push('freediving', 'diving');
+        continue;
+      }
+      if (t.includes('divin') || t.includes('selam')) {
+        searchKeywords.push('diving');
+        continue;
+      }
+
+      searchKeywords.push(t);
+    }
   }
   if (params.interests && params.interests.length > 0) {
     for (const interest of params.interests) {
